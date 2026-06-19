@@ -25,6 +25,7 @@ interface AdminDashboardProps {
   onRejectSeller: (sellerId: string) => void;
   onDeleteProduct: (productId: string) => void;
   onAddProduct: (product: Omit<Product, "id" | "sellerId" | "sellerName" | "ratings" | "reviewsCount" | "reviews" | "createdDate" | "updatedDate">) => void;
+  onAddCustomer: (customer: { name: string; email: string; phone: string; address: string; role: "customer" }) => void;
 }
 
 export default function AdminDashboard({
@@ -33,8 +34,9 @@ export default function AdminDashboard({
   onRejectSeller,
   onDeleteProduct,
   onAddProduct,
+  onAddCustomer,
 }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"analytics" | "sellers" | "products" | "categories">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "sellers" | "products" | "categories" | "customers">("analytics");
 
   // Admin Add Product Form State
   const [showAddForm, setShowAddForm] = useState(false);
@@ -48,6 +50,38 @@ export default function AdminDashboard({
   const [newProdImageSeed, setNewProdImageSeed] = useState("saree");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState(false);
+
+  // Admin Add Customer Form State
+  const [showAddCustForm, setShowAddCustForm] = useState(false);
+  const [newCustName, setNewCustName] = useState("");
+  const [newCustEmail, setNewCustEmail] = useState("");
+  const [newCustPhone, setNewCustPhone] = useState("");
+  const [newCustAddress, setNewCustAddress] = useState("");
+  const [custFormSuccess, setCustFormSuccess] = useState(false);
+
+  const handleAdminAddCustomerSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCustName || !newCustEmail || !newCustPhone || !newCustAddress) return;
+
+    onAddCustomer({
+      name: newCustName,
+      email: newCustEmail,
+      phone: newCustPhone,
+      address: newCustAddress,
+      role: "customer"
+    });
+
+    setCustFormSuccess(true);
+    setNewCustName("");
+    setNewCustEmail("");
+    setNewCustPhone("");
+    setNewCustAddress("");
+
+    setTimeout(() => {
+      setCustFormSuccess(false);
+      setShowAddCustForm(false);
+    }, 2000);
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -163,6 +197,16 @@ export default function AdminDashboard({
           >
             <FolderTree className="h-3.5 w-3.5 inline mr-1" />
             Categories
+          </button>
+          <button
+            id="adm-tab-customers"
+            onClick={() => setActiveTab("customers")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === "customers" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Users className="h-3.5 w-3.5 inline mr-1" />
+            Customers Gate
           </button>
         </div>
       </div>
@@ -613,6 +657,131 @@ export default function AdminDashboard({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "customers" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-2">
+              <div>
+                <h2 className="text-sm font-bold text-slate-800">Platform Registered Customers</h2>
+                <p className="text-[11px] text-slate-400">View registered customers, or add new customers directly.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddCustForm(!showAddCustForm)}
+                className="bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-xs transition hover:scale-[1.01] cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {showAddCustForm ? "Close Form" : "Add New Customer"}
+              </button>
+            </div>
+
+            {showAddCustForm && (
+              <form onSubmit={handleAdminAddCustomerSubmit} className="space-y-4 max-w-2xl bg-slate-50/50 p-6 rounded-2xl border border-slate-100 mb-6 animate-in slide-in-from-top-2 duration-200">
+                <span className="text-[10px] font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full uppercase tracking-wider block w-max">
+                  Admin Portal - Add New Customer
+                </span>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Customer Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={newCustName}
+                      onChange={(e) => setNewCustName(e.target.value)}
+                      placeholder="e.g. Roshni Patel"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-hidden focus:border-pink-500 focus:bg-white transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={newCustEmail}
+                      onChange={(e) => setNewCustEmail(e.target.value)}
+                      placeholder="e.g. roshni@example.com"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-hidden focus:border-pink-500 focus:bg-white transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Contact Phone</label>
+                    <input
+                      type="tel"
+                      required
+                      value={newCustPhone}
+                      onChange={(e) => setNewCustPhone(e.target.value)}
+                      placeholder="e.g. 9876543210"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-hidden focus:border-pink-500 focus:bg-white transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Complete Delivery Address</label>
+                  <textarea
+                    required
+                    rows={2}
+                    value={newCustAddress}
+                    onChange={(e) => setNewCustAddress(e.target.value)}
+                    placeholder="Street, sector, housing complex, state & pin code..."
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-hidden focus:border-pink-500 focus:bg-white transition-colors"
+                  />
+                </div>
+
+                {custFormSuccess && (
+                  <div className="bg-green-50 text-green-700 border border-green-100 p-3 rounded-lg text-xs font-semibold animate-pulse flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 shrink-0" />
+                    <span>Customer registered successfully!</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs py-2 px-4 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
+                >
+                  <Plus className="h-4 w-4" />
+                  Register Customer Profile
+                </button>
+              </form>
+            )}
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50 text-slate-400 uppercase tracking-wider text-[10px]">
+                    <th className="p-3 font-semibold">Name & Contact</th>
+                    <th className="p-3 font-semibold">Email</th>
+                    <th className="p-3 font-semibold">Delivery Address</th>
+                    <th className="p-3 font-semibold text-right">Registration Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {dbState.users.filter(u => u.role === "customer").map((u) => (
+                    <tr key={u.id} className="hover:bg-slate-50">
+                      <td className="p-3">
+                        <p className="font-bold text-slate-800">{u.name}</p>
+                        <p className="text-[10px] text-slate-400">{u.phone}</p>
+                      </td>
+                      <td className="p-3 text-slate-600">{u.email}</td>
+                      <td className="p-3 text-slate-500 max-w-[300px] truncate" title={u.address}>{u.address}</td>
+                      <td className="p-3 text-right text-slate-400 font-mono">
+                        {new Date(u.joinedAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
+                      </td>
+                    </tr>
+                  ))}
+                  {dbState.users.filter(u => u.role === "customer").length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="p-4 text-center text-slate-400">No registered customers found. Add some above!</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

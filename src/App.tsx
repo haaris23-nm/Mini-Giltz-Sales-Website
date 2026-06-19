@@ -334,6 +334,16 @@ export default function App() {
     syncDb({ ...dbState, products: updatedProducts });
   };
 
+  // Customer profile registration by Admin
+  const handleAddCustomer = (cVals: any) => {
+    const newUser: User = {
+      ...cVals,
+      id: `user-${Date.now()}`,
+      joinedAt: new Date().toISOString()
+    };
+    syncDb({ ...dbState, users: [...dbState.users, newUser] });
+  };
+
   // Seller self catalog creation
   const handleAddSellerProduct = (pVals: any) => {
     if (!currentUser) return;
@@ -1727,6 +1737,7 @@ export default function App() {
                 onRejectSeller={handleRejectSeller}
                 onDeleteProduct={handleDeleteProduct}
                 onAddProduct={handleAddSellerProduct}
+                onAddCustomer={handleAddCustomer}
               />
             )}
           </div>
