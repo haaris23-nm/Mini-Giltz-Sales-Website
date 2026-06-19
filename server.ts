@@ -11,6 +11,9 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 
 app.use(express.json());
 
+// Serve static assets (QR codes, payment images, etc.)
+app.use("/assets", express.static(path.join(process.cwd(), "assets")));
+
 // Initialize Gemini SDK with User-Agent header for telemetry.
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,

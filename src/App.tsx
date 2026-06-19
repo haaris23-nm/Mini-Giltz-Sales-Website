@@ -349,6 +349,11 @@ export default function App() {
     syncDb({ ...dbState, users: [...dbState.users, newUser] });
   };
 
+  // Admin settings update (UPI ID & QR mode)
+  const handleUpdateSettings = (newSettings: { upiId: string; qrMode: "dynamic" | "static" }) => {
+    syncDb({ ...dbState, settings: newSettings });
+  };
+
   // Seller self catalog creation
   const handleAddSellerProduct = (pVals: any) => {
     if (!currentUser) return;
@@ -1773,6 +1778,7 @@ export default function App() {
                 onDeleteProduct={handleDeleteProduct}
                 onAddProduct={handleAddSellerProduct}
                 onAddCustomer={handleAddCustomer}
+                onUpdateSettings={handleUpdateSettings}
               />
             )}
           </div>
@@ -1813,14 +1819,26 @@ export default function App() {
                 </div>
               ) : (
                 <>
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(
-                      `upi://pay?pa=tamilveni2306@okaxis&pn=MiniGlitz&am=${grandTotal}&cu=INR`
-                    )}`}
-                    alt="UPI Payment QR Code"
-                    className="h-[200px] w-[200px] bg-white rounded-lg shadow-sm border border-slate-200"
-                  />
-                  <div className="flex gap-4 items-center justify-center mt-3 text-slate-400 font-bold text-[10px] uppercase tracking-wider">
+                  {dbState.settings?.qrMode === "static" ? (
+                    <img
+                      src="/assets/payment_qr.png"
+                      alt="UPI Payment QR Code"
+                      className="h-[200px] w-[200px] bg-white rounded-lg shadow-sm border border-slate-200 object-contain"
+                    />
+                  ) : (
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(
+                        `upi://pay?pa=${dbState.settings?.upiId || "tamilveni2306@okaxis"}&pn=MiniGlitz&am=${grandTotal}&cu=INR`
+                      )}`}
+                      alt="UPI Payment QR Code"
+                      className="h-[200px] w-[200px] bg-white rounded-lg shadow-sm border border-slate-200"
+                    />
+                  )}
+                  {/* UPI ID display */}
+                  <div className="mt-2 bg-slate-100 rounded-lg px-3 py-1 text-[10px] text-slate-600 font-mono font-semibold">
+                    UPI: {dbState.settings?.upiId || "tamilveni2306@okaxis"}
+                  </div>
+                  <div className="flex gap-4 items-center justify-center mt-2 text-slate-400 font-bold text-[10px] uppercase tracking-wider">
                     <span>GooglePay</span>
                     <span className="h-3 w-px bg-slate-300"></span>
                     <span>PhonePe</span>

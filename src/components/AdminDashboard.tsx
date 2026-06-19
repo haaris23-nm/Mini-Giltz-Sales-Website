@@ -17,6 +17,7 @@ import {
   Sparkles,
   Upload,
   X,
+  Settings,
 } from "lucide-react";
 
 interface AdminDashboardProps {
@@ -26,6 +27,7 @@ interface AdminDashboardProps {
   onDeleteProduct: (productId: string) => void;
   onAddProduct: (product: Omit<Product, "id" | "sellerId" | "sellerName" | "ratings" | "reviewsCount" | "reviews" | "createdDate" | "updatedDate">) => void;
   onAddCustomer: (customer: { name: string; email: string; phone: string; address: string; role: "customer" }) => void;
+  onUpdateSettings: (settings: { upiId: string; qrMode: "dynamic" | "static" }) => void;
 }
 
 export default function AdminDashboard({
@@ -35,8 +37,24 @@ export default function AdminDashboard({
   onDeleteProduct,
   onAddProduct,
   onAddCustomer,
+  onUpdateSettings,
 }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"analytics" | "sellers" | "products" | "categories" | "customers">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "sellers" | "products" | "categories" | "customers" | "settings">("analytics");
+
+  // Admin settings state
+  const [settingsUpiId, setSettingsUpiId] = useState(dbState.settings?.upiId || "tamilveni2306@okaxis");
+  const [settingsQrMode, setSettingsQrMode] = useState<"dynamic" | "static">(dbState.settings?.qrMode || "static");
+  const [settingsSuccess, setSettingsSuccess] = useState(false);
+
+  const handleSaveSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdateSettings({
+      upiId: settingsUpiId,
+      qrMode: settingsQrMode
+    });
+    setSettingsSuccess(true);
+    setTimeout(() => setSettingsSuccess(false), 2000);
+  };
 
   // Admin Add Product Form State
   const [showAddForm, setShowAddForm] = useState(false);
@@ -207,6 +225,16 @@ export default function AdminDashboard({
           >
             <Users className="h-3.5 w-3.5 inline mr-1" />
             Customers Gate
+          </button>
+          <button
+            id="adm-tab-settings"
+            onClick={() => setActiveTab("settings")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === "settings" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Settings className="h-3.5 w-3.5 inline mr-1" />
+            Platform Settings
           </button>
         </div>
       </div>
@@ -782,6 +810,130 @@ export default function AdminDashboard({
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "settings" && (
+          <div className="space-y-6 max-w-2xl">
+            <div className="border-b border-slate-100 pb-3 mb-2">
+              <h2 className="text-sm font-bold text-slate-800">Platform Settings</h2>
+              <p className="text-[11px] text-slate-400">Configure system parameters, gateway modes, and platform settings.</p>
+            </div>
+
+            <form onSubmit={handleSaveSettings} className="space-y-4 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+              <span className="text-[10px] font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full uppercase tracking-wider block w-max">
+                UPI Payment Configuration
+              </span>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Platform UPI ID / VPA Address</label>
+                  <input
+                    type="text"
+                    required
+                    value={settingsUpiId}
+                    onChange={(e) => setSettingsUpiId(e.target.value)}
+                    placeholder="e.g. tamilveni2306@okaxis"
+                    className="w-full max-w-md bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-hidden focus:border-pink-500 focus:bg-white transition-colors"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">This ID will be used to dynamically generate the payment QR code during checkout.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2.5">UPI QR Scanner Mode</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md text-xs">
+                    <div
+                      onClick={() => setSettingsQrMode("static")}
+                      className={`border rounded-xl p-3.5 cursor-pointer flex items-start gap-2.5 transition-all bg-white ${
+                        settingsQrMode === "static"
+                          ? "border-pink-500 bg-pink-50/10 shadow-3xs"
+                          : "border-slate-100 hover:bg-slate-50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        checked={settingsQrMode === "static"}
+                        onChange={() => {}}
+                        className="mt-0.5 h-3.5 w-3.5 accent-pink-600"
+                      />
+                      <div>
+                        <h4 className="font-bold text-slate-800">Static Scan Image</h4>
+                        <p className="text-slate-400 text-[10px] whitespace-normal mt-0.5">Displays the default static scan image you uploaded.</p>
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setSettingsQrMode("dynamic")}
+                      className={`border rounded-xl p-3.5 cursor-pointer flex items-start gap-2.5 transition-all bg-white ${
+                        settingsQrMode === "dynamic"
+                          ? "border-pink-500 bg-pink-50/10 shadow-3xs"
+                          : "border-slate-100 hover:bg-slate-50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        checked={settingsQrMode === "dynamic"}
+                        onChange={() => {}}
+                        className="mt-0.5 h-3.5 w-3.5 accent-pink-600"
+                      />
+                      <div>
+                        <h4 className="font-bold text-slate-800">Dynamic QR Generator</h4>
+                        <p className="text-slate-400 text-[10px] whitespace-normal mt-0.5">Generates a scannable QR link with the exact cart order total.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {settingsSuccess && (
+                <div className="bg-green-50 text-green-700 border border-green-100 p-3 rounded-lg text-xs font-semibold animate-pulse flex items-center gap-2 max-w-md">
+                  <Sparkles className="h-4 w-4 shrink-0" />
+                  <span>Platform settings saved successfully!</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs py-2 px-5 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Save Platform Settings
+              </button>
+            </form>
+
+            {/* QR Code Preview Block */}
+            <div className="border border-slate-100 rounded-2xl p-5 bg-slate-50 flex items-center gap-5">
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm shrink-0">
+                {settingsQrMode === "static" ? (
+                  <div className="w-[120px] h-[120px] bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center">
+                    <img
+                      src="/assets/payment_qr.png"
+                      alt="Static Payment QR Code"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=4&data=${encodeURIComponent(
+                      `upi://pay?pa=${settingsUpiId}&pn=MiniGlitz&am=100&cu=INR`
+                    )}`}
+                    alt="Dynamic Payment QR Code"
+                    className="w-[120px] h-[120px] rounded-lg shadow-sm border border-slate-100"
+                  />
+                )}
+              </div>
+              <div className="text-xs space-y-1.5">
+                <h3 className="font-bold text-slate-800 uppercase tracking-wider text-[10px]">Live QR Code Scanner Preview</h3>
+                <p className="text-slate-500 font-medium">
+                  {settingsQrMode === "static"
+                    ? "Currently showing the custom static payment scanner image you provided."
+                    : `Generating dynamic QR links pointing to: ${settingsUpiId}`}
+                </p>
+                <div className="flex gap-3 text-[10px] font-bold text-pink-600 bg-pink-50 py-1 px-2 rounded-lg w-max uppercase mt-1">
+                  <span>Target UPI VPA: {settingsUpiId}</span>
+                </div>
+              </div>
             </div>
           </div>
         )}

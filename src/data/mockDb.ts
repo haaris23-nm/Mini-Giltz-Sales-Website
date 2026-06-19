@@ -8,6 +8,10 @@ export interface DbState {
   notifications: Notification[];
   cart: { [userId: string]: any[] }; // cart cache
   wishlist: { [userId: string]: string[] }; // wishlist of productIds
+  settings: {
+    upiId: string;
+    qrMode: "dynamic" | "static";
+  };
 }
 
 // Predefined Categories
@@ -39,7 +43,7 @@ const SEED_ORDERS: Order[] = [];
 const SEED_NOTIFICATIONS: Notification[] = [];
 
 // LocalStorage State Manager
-const DB_LOCAL_KEY = "meesho_platform_db_v2";
+const DB_LOCAL_KEY = "meesho_platform_db_v3";
 
 export const getDbState = (): DbState => {
   if (typeof window === "undefined") {
@@ -50,7 +54,11 @@ export const getDbState = (): DbState => {
       orders: SEED_ORDERS,
       notifications: SEED_NOTIFICATIONS,
       cart: {},
-      wishlist: {}
+      wishlist: {},
+      settings: {
+        upiId: "tamilveni2306@okaxis",
+        qrMode: "static"
+      }
     };
   }
 
@@ -63,7 +71,11 @@ export const getDbState = (): DbState => {
       orders: SEED_ORDERS,
       notifications: SEED_NOTIFICATIONS,
       cart: {},
-      wishlist: {}
+      wishlist: {},
+      settings: {
+        upiId: "tamilveni2306@okaxis",
+        qrMode: "static"
+      }
     };
     localStorage.setItem(DB_LOCAL_KEY, JSON.stringify(initialState));
     return initialState;
@@ -80,7 +92,11 @@ export const getDbState = (): DbState => {
       orders: SEED_ORDERS,
       notifications: SEED_NOTIFICATIONS,
       cart: {},
-      wishlist: {}
+      wishlist: {},
+      settings: {
+        upiId: "tamilveni2306@okaxis",
+        qrMode: "static"
+      }
     };
   }
 };
