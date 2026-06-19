@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  # Supabase local alternative or simple MySQL database for Spring Boot
+  mysql-db:
+    image: mysql:8.0
+    container_name: meesho_mysql_db
+    environment:
+      MYSQL_DATABASE: meesho_marketplace
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: dbuser
+      MYSQL_PASSWORD: dbpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+
+  # Spring Boot Java REST Application
+  springboot-backend:
+    build:
+      context: ./java-springboot-backend
+      dockerfile: Dockerfile
+    container_name: meesho_springboot_backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/meesho_marketplace?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: dbuser
+      SPRING_DATASOURCE_PASSWORD: dbpassword
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      - mysql-db
+
+  # Next.js Frontend Hub
+  nextjs-frontend:
+    build:
+      context: ./nextjs-frontend
+      dockerfile: Dockerfile
+    container_name: meesho_nextjs_frontend
+    ports:
+      - "3001:3000"
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: "https://your-supabase-url.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "your-supabase-anon-key"
+      NEXT_PUBLIC_API_BACKEND_URL: "http://springboot-backend:8080"
+    depends_on:
+      - springboot-backend
+
+volumes:
+  db-data:

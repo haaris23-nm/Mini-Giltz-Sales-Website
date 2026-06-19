@@ -1,0 +1,6 @@
+{
+  "name": "Mini Glitz",
+  "description": "A high-fidelity full-stack e-commerce marketplace featuring multiple seller portals, complete customer journeys, admin platform monitoring, and secure server-side Gemini AI recommendations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
