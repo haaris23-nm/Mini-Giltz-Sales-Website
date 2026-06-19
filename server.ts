@@ -34,6 +34,11 @@ const withRetry = async <T>(fn: () => Promise<T>, retries = 2, delayMs = 300): P
   }
 };
 
+// Health check endpoint
+app.get("/api/health", (req: express.Request, res: express.Response) => {
+  res.status(200).json({ status: "UP", timestamp: new Date().toISOString() });
+});
+
 // Server-Side Gemini AI Recommendations API endpoint
 app.post("/api/recommendations", async (req: express.Request, res: express.Response) => {
   try {

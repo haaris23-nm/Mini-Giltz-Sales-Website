@@ -37,16 +37,17 @@ public class AiController {
 
     /**
      * POST /api/recommendations
-     * Calls Gemini AI or returns high-fidelity fallback if there is throttling/503 errors.
+     * Calls Gemini AI or returns high-fidelity fallback if there is throttling/503
+     * errors.
      */
     @PostMapping("/recommendations")
-    public ResponseEntity<GeminiService.RecommendationResponse> getAiRecommendations(@RequestBody RecommendationRequestDTO request) {
+    public ResponseEntity<GeminiService.RecommendationResponse> getAiRecommendations(
+            @RequestBody RecommendationRequestDTO request) {
         GeminiService.RecommendationResponse recommendations = geminiService.getRecommendations(
                 request.getBrowsingHistory(),
                 request.getPurchaseHistory(),
                 request.getWishlist(),
-                request.getAllProducts()
-        );
+                request.getAllProducts());
         return ResponseEntity.ok(recommendations);
     }
 
