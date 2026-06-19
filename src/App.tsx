@@ -815,59 +815,7 @@ export default function App() {
       {/* Main Container body */}
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
 
-        {/* AI Recommendations Banner at Home Page */}
-        {activePage === "home" && (
-          <div className="mb-6 animate-in fade-in duration-200">
-            {loadingAI ? (
-              <div className="bg-white border border-slate-100 rounded-xl p-4 text-xs font-semibold text-slate-400 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-pink-600 animate-spin" />
-                <span>personalizing smart collections based on your search history...</span>
-              </div>
-            ) : aiSuggestions ? (
-              <div className="bg-gradient-to-r from-pink-500/10 via-pink-600/5 to-slate-500/5 border border-pink-200 rounded-2xl p-4 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-1 opacity-25">
-                  <Sparkles className="h-24 w-24 text-pink-600" />
-                </div>
-                <div className="flex items-start gap-3.5 relative z-10">
-                  <div className="bg-pink-600 text-white p-2 rounded-xl shrink-0">
-                    <Sparkles className="h-5 w-5 fill-current" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-pink-600 uppercase tracking-widest block">
-                      Meesho AI Smart Recommendation
-                    </span>
-                    <h3 className="font-bold text-slate-900 text-sm mt-0.5">
-                      Suggestions customized for you
-                    </h3>
-                    <p className="text-slate-600 text-xs mt-1 leading-relaxed">
-                      "{aiSuggestions.reason}"
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2 mt-3.5">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">Boosted Keywords:</span>
-                      {aiSuggestions.recommendedKeywords.map((tag, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => {
-                            setSearchQuery(tag);
-                            setActivePage("home");
-                          }}
-                          className="bg-white border hover:border-pink-300 text-slate-700 hover:text-pink-600 text-[11px] font-semibold rounded-full px-2.5 py-0.5 cursor-pointer shadow-xs"
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-2xl border border-slate-100 p-4 font-medium text-xs text-slate-500 flex items-center justify-between">
-                <span>Want personalized fashion offers? Add items to your Wishlist to boot Meesho Smart Recommendation!</span>
-                <span className="text-pink-600 font-bold">✨ AI Driven</span>
-              </div>
-            )}
-          </div>
-        )}
+
 
         {/* PAGE: HOME (Product Listing Page) */}
         {activePage === "home" && (
