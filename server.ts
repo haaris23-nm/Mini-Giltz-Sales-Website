@@ -35,7 +35,7 @@ const withRetry = async <T>(fn: () => Promise<T>, retries = 2, delayMs = 300): P
 };
 
 // Health check endpoint
-app.get("/api/health", (req: express.Request, res: express.Response) => {
+app.get("/api/health-check", (req: express.Request, res: express.Response) => {
   res.status(200).json({ status: "UP", timestamp: new Date().toISOString() });
 });
 
