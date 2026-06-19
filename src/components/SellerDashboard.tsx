@@ -15,6 +15,7 @@ import {
   X,
   Sparkles,
   Plus,
+  Upload,
 } from "lucide-react";
 
 interface SellerDashboardProps {
@@ -65,8 +66,20 @@ export default function SellerDashboard({
   const [newProdCategory, setNewProdCategory] = useState("Ethnic Wear");
   const [newProdDesc, setNewProdDesc] = useState("");
   const [newProdImageSeed, setNewProdImageSeed] = useState("saree_design");
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
 
   const [formSuccess, setFormSuccess] = useState(false);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUploadedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Handle product listing submit
   const handleAddNewProductSubmit = (e: React.FormEvent) => {
@@ -81,13 +94,14 @@ export default function SellerDashboard({
       stockQuantity: Number(newProdStock),
       category: newProdCategory,
       description: newProdDesc,
-      images: [`https://picsum.photos/seed/${newProdImageSeed || "ethnic"}/600/600`],
+      images: [uploadedImage || `https://picsum.photos/seed/${newProdImageSeed || "ethnic"}/600/600`],
     });
 
     setFormSuccess(true);
     setNewProdName("");
     setNewProdBrand("");
     setNewProdDesc("");
+    setUploadedImage(null);
 
     setTimeout(() => {
       setFormSuccess(false);
@@ -326,15 +340,60 @@ export default function SellerDashboard({
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Mock Image Seed (For placeholder styling)</label>
-                <input
-                  type="text"
-                  value={newProdImageSeed}
-                  onChange={(e) => setNewProdImageSeed(e.target.value)}
-                  placeholder="e.g. silk_saree, lipstick, ring"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-hidden focus:border-pink-500 focus:bg-white transition-colors"
-                />
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">Product Image</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Image Upload Box */}
+                  <div className="border-2 border-dashed border-slate-200 hover:border-pink-500 rounded-2xl p-4 transition-all flex flex-col items-center justify-center bg-white cursor-pointer relative min-h-[140px]">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div className="text-center flex flex-col items-center gap-1.5 pointer-events-none">
+                      <Upload className="h-5 w-5 text-pink-600" />
+                      <span className="text-xs font-semibold text-slate-700">Click to upload image</span>
+                      <span className="text-[10px] text-slate-400">Supports PNG, JPG, WEBP (Max 5MB)</span>
+                    </div>
+                  </div>
+                  
+                  {/* Preview / Fallback Box */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-col items-center justify-center relative min-h-[140px]">
+                    {uploadedImage ? (
+                      <div className="relative w-full h-full flex flex-col items-center justify-center">
+                        <img
+                          src={uploadedImage}
+                          alt="Upload preview"
+                          className="max-h-[110px] rounded-lg object-contain border border-slate-100 shadow-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setUploadedImage(null)}
+                          className="absolute top-2 right-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-full p-1 cursor-pointer z-20"
+                          title="Remove image"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                        <span className="text-[9px] text-green-600 font-bold mt-1">✓ Custom Image Loaded</span>
+                      </div>
+                    ) : (
+                      <div className="text-center w-full">
+                        <span className="text-[10px] text-slate-400 font-semibold block uppercase mb-2">Or Use Placeholder Seed</span>
+                        <input
+                          type="text"
+                          value={newProdImageSeed}
+                          onChange={(e) => setNewProdImageSeed(e.target.value)}
+                          placeholder="e.g. silk_saree, lipstick, ring"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-center focus:outline-hidden focus:border-pink-500 transition-colors"
+                        />
+                        <span className="text-[9px] text-slate-400 block mt-2">
+                          Preview: picsum.photos/seed/{newProdImageSeed || "ethnic"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
