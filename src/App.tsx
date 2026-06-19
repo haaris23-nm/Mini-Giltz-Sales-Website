@@ -84,6 +84,11 @@ export default function App() {
   } | null>(null);
   const [loadingAI, setLoadingAI] = useState(false);
 
+  // UPI QR Code Simulator states
+  const [showUpiModal, setShowUpiModal] = useState(false);
+  const [upiTimer, setUpiTimer] = useState(120);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+
   // Sync state changes with localStorage
   const syncDb = (updatedState: DbState) => {
     setDbState(updatedState);
@@ -554,6 +559,105 @@ export default function App() {
     setActivePage("checkout");
   };
 
+  // UPI QR Code countdown timer loop
+  useEffect(() => {
+    let interval: any;
+    if (showUpiModal && upiTimer > 0) {
+      interval = setInterval(() => {
+        setUpiTimer(prev => prev - 1);
+      }, 1000);
+    } else if (upiTimer === 0) {
+      alert("Payment window expired! Please try placing your order again.");
+      setShowUpiModal(false);
+    }
+    return () => clearInterval(interval);
+  }, [showUpiModal, upiTimer]);
+
+  const formatUpiTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Helper function to build & process order entries
+  const processOrderPlacement = (overridePaymentMethod?: string) => {
+    const finalPaymentMethod = overridePaymentMethod || paymentMethod;
+    const newOrderId = `ord-${1000 + dbState.orders.length + 1}`;
+    const newOrder: Order = {
+      id: newOrderId,
+      customerId: currentUser!.id,
+      customerName: checkoutName,
+      address: checkoutAddress,
+      phone: checkoutPhone,
+      items: userCart.map(i => ({
+        productId: i.productId,
+        name: i.name,
+        quantity: i.quantity,
+        price: i.price,
+        discountPercentage: i.discountPercentage,
+        image: i.image
+      })),
+      totalAmount: grandTotal,
+      discountAmount: discountSavings + couponOffset,
+      shippingCharges: shippingCost,
+      paymentMethod: finalPaymentMethod as any,
+      paymentStatus: finalPaymentMethod === "cod" ? "pending" : "paid",
+      status: "Pending",
+      createdDate: new Date().toISOString(),
+      updatedDate: new Date().toISOString(),
+      invoiceNumber: `INV-2026-${1000 + dbState.orders.length + 1}`
+    };
+
+    // Clear Customer's Cart state
+    const updatedCerts = { ...dbState.cart };
+    updatedCerts[currentUser!.id] = [];
+
+    // Subtract product stock quantities
+    const updatedProducts = dbState.products.map(p => {
+      const boughtItem = userCart.find(i => i.productId === p.id);
+      if (boughtItem) {
+        return { ...p, stockQuantity: Math.max(0, p.stockQuantity - boughtItem.quantity) };
+      }
+      return p;
+    });
+
+    // Notify customer and seller
+    const productSellerIds = userCart.map(i => i.sellerId);
+    const sellerNotif: Notification = {
+      id: `notif-order-seller-${Date.now()}`,
+      userId: productSellerIds[0] || "all",
+      title: "New Order Dispatch Required",
+      message: `Package ${newOrderId} has been secured via ${finalPaymentMethod.toUpperCase()}. Pack and ship immediately.`,
+      type: "seller",
+      isRead: false,
+      createdDate: new Date().toISOString()
+    };
+
+    const custNotif: Notification = {
+      id: `notif-order-cust-${Date.now()}`,
+      userId: currentUser!.id,
+      title: "Order Placed Successfully",
+      message: `Your package ${newOrderId} has been securely processed. Tracking has booted.`,
+      type: "order",
+      isRead: false,
+      createdDate: new Date().toISOString()
+    };
+
+    const nextDbState = {
+      ...dbState,
+      orders: [newOrder, ...dbState.orders],
+      cart: updatedCerts,
+      products: updatedProducts,
+      notifications: [custNotif, sellerNotif, ...dbState.notifications]
+    };
+
+    syncDb(nextDbState);
+    setUserCart([]);
+    setAppliedCoupon("");
+    setCouponOffset(0);
+    setLastCreatedOrder(newOrder);
+  };
+
   // Submit place order
   const handlePlaceOrderSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -562,86 +666,17 @@ export default function App() {
       return;
     }
 
-    setPaymentProcessing(true);
+    if (paymentMethod === "upi") {
+      setShowUpiModal(true);
+      setUpiTimer(120);
+      return;
+    }
 
+    setPaymentProcessing(true);
     // Simulate Razorpay or card processing latency
     setTimeout(() => {
-      const newOrderId = `ord-${1000 + dbState.orders.length + 1}`;
-      const newOrder: Order = {
-        id: newOrderId,
-        customerId: currentUser!.id,
-        customerName: checkoutName,
-        address: checkoutAddress,
-        phone: checkoutPhone,
-        items: userCart.map(i => ({
-          productId: i.productId,
-          name: i.name,
-          quantity: i.quantity,
-          price: i.price,
-          discountPercentage: i.discountPercentage,
-          image: i.image
-        })),
-        totalAmount: grandTotal,
-        discountAmount: discountSavings + couponOffset,
-        shippingCharges: shippingCost,
-        paymentMethod: paymentMethod as any,
-        paymentStatus: paymentMethod === "cod" ? "pending" : "paid",
-        status: "Pending",
-        createdDate: new Date().toISOString(),
-        updatedDate: new Date().toISOString(),
-        invoiceNumber: `INV-2026-${1000 + dbState.orders.length + 1}`
-      };
-
-      // Clear Customer's Cart state
-      const updatedCerts = { ...dbState.cart };
-      updatedCerts[currentUser!.id] = [];
-
-      // Subtract product stock quantities
-      const updatedProducts = dbState.products.map(p => {
-        const boughtItem = userCart.find(i => i.productId === p.id);
-        if (boughtItem) {
-          return { ...p, stockQuantity: Math.max(0, p.stockQuantity - boughtItem.quantity) };
-        }
-        return p;
-      });
-
-      // Notify customer and seller
-      const productSellerIds = userCart.map(i => i.sellerId);
-      const sellerNotif: Notification = {
-        id: `notif-order-seller-${Date.now()}`,
-        userId: productSellerIds[0] || "all",
-        title: "New Order Dispatch Required",
-        message: `Package ${newOrderId} has been secured via ${paymentMethod.toUpperCase()}. Pack and ship immediately.`,
-        type: "seller",
-        isRead: false,
-        createdDate: new Date().toISOString()
-      };
-
-      const custNotif: Notification = {
-        id: `notif-order-cust-${Date.now()}`,
-        userId: currentUser!.id,
-        title: "Order Placed Successfully",
-        message: `Your package ${newOrderId} has been securely processed. Tracking has booted.`,
-        type: "order",
-        isRead: false,
-        createdDate: new Date().toISOString()
-      };
-
-      const nextDbState = {
-        ...dbState,
-        orders: [newOrder, ...dbState.orders],
-        cart: updatedCerts,
-        products: updatedProducts,
-        notifications: [custNotif, sellerNotif, ...dbState.notifications]
-      };
-
-      syncDb(nextDbState);
-      setUserCart([]);
-      setAppliedCoupon("");
-      setCouponOffset(0);
-      setLastCreatedOrder(newOrder);
+      processOrderPlacement();
       setPaymentProcessing(false);
-      setActivePage("tracking");
     }, 2000);
   };
 
@@ -1744,6 +1779,101 @@ export default function App() {
         )}
 
       </main>
+
+      {showUpiModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-100 rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-200">
+            {/* Header branding */}
+            <div className="flex items-center justify-center gap-1.5 border-b border-slate-100 pb-3">
+              <span className="bg-pink-600 text-white font-black text-xs px-2.5 py-0.5 rounded-full">
+                MINIGLITZ PAY
+              </span>
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                Secure UPI Interface
+              </span>
+            </div>
+
+            {/* Title & timer */}
+            <div>
+              <h3 className="font-bold text-slate-900 text-base">Pay using GPay / PhonePe / BHIM</h3>
+              <p className="text-slate-500 text-xs mt-1">Scan the QR code using any UPI application to complete payment.</p>
+              
+              <div className="mt-3 flex items-center justify-center gap-1.5 bg-pink-50 text-pink-700 font-bold text-xs py-1.5 px-3 rounded-full w-max mx-auto">
+                <span className="h-2 w-2 bg-pink-600 rounded-full animate-ping"></span>
+                <span>Active Payment Window: {formatUpiTime(upiTimer)}</span>
+              </div>
+            </div>
+
+            {/* QR Code image container */}
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col items-center justify-center relative">
+              {verifyingPayment ? (
+                <div className="h-[200px] flex flex-col items-center justify-center gap-3">
+                  <div className="h-8 w-8 border-4 border-pink-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs font-bold text-slate-700 animate-pulse">Verifying UPI network transaction reference...</span>
+                </div>
+              ) : (
+                <>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(
+                      `upi://pay?pa=tamilveni2306@okaxis&pn=MiniGlitz&am=${grandTotal}&cu=INR`
+                    )}`}
+                    alt="UPI Payment QR Code"
+                    className="h-[200px] w-[200px] bg-white rounded-lg shadow-sm border border-slate-200"
+                  />
+                  <div className="flex gap-4 items-center justify-center mt-3 text-slate-400 font-bold text-[10px] uppercase tracking-wider">
+                    <span>GooglePay</span>
+                    <span className="h-3 w-px bg-slate-300"></span>
+                    <span>PhonePe</span>
+                    <span className="h-3 w-px bg-slate-300"></span>
+                    <span>Paytm</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Bill Info */}
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 flex items-center justify-between text-xs">
+              <div className="text-left font-medium text-slate-500">
+                <p>Merchant: <span className="text-slate-800 font-bold">Mini Glitz Ltd</span></p>
+                <p className="text-[10px] text-slate-400">Ref: MG-${Date.now().toString().substring(6)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-slate-400">Grand Total</p>
+                <p className="text-pink-600 font-black text-sm">₹{grandTotal}</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                disabled={verifyingPayment}
+                onClick={() => {
+                  setVerifyingPayment(true);
+                  setTimeout(() => {
+                    setVerifyingPayment(false);
+                    setShowUpiModal(false);
+                    processOrderPlacement("upi");
+                  }, 2500);
+                }}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer"
+              >
+                <span>✓ I Have Paid / Simulate Success</span>
+              </button>
+              <button
+                type="button"
+                disabled={verifyingPayment}
+                onClick={() => {
+                  setShowUpiModal(false);
+                }}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 text-xs rounded-xl transition cursor-pointer"
+              >
+                Cancel Payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Dynamic Support Assistant floating panel */}
       <AIChatBot />
