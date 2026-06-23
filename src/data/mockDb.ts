@@ -64,7 +64,7 @@ export const getDbState = (): DbState => {
 
   const stored = localStorage.getItem(DB_LOCAL_KEY);
   if (!stored) {
-    const initialState = {
+    const initialState: DbState = {
       users: SEED_USERS,
       sellers: SEED_SELLERS,
       products: SEED_PRODUCTS,
