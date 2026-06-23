@@ -27,7 +27,9 @@ interface AdminDashboardProps {
   onDeleteProduct: (productId: string) => void;
   onAddProduct: (product: Omit<Product, "id" | "sellerId" | "sellerName" | "ratings" | "reviewsCount" | "reviews" | "createdDate" | "updatedDate">) => void;
   onAddCustomer: (customer: { name: string; email: string; phone: string; address: string; role: "customer" }) => void;
-  onUpdateSettings: (settings: { upiId: string; qrMode: "dynamic" | "static" }) => void;
+  onDeleteCustomer: (userId: string) => void;
+  onEditCustomer: (userId: string, updatedDetails: { name: string; email: string; phone: string; address: string }) => void;
+  onUpdateSettings: (settings: { upiId: string; qrMode: "dynamic" | "static"; qrImageUrl?: string }) => void;
 }
 
 export default function AdminDashboard({
@@ -37,6 +39,8 @@ export default function AdminDashboard({
   onDeleteProduct,
   onAddProduct,
   onAddCustomer,
+  onDeleteCustomer,
+  onEditCustomer,
   onUpdateSettings,
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<"analytics" | "sellers" | "products" | "categories" | "customers" | "settings">("analytics");
@@ -44,16 +48,56 @@ export default function AdminDashboard({
   // Admin settings state
   const [settingsUpiId, setSettingsUpiId] = useState(dbState.settings?.upiId || "tamilveni2306@okaxis");
   const [settingsQrMode, setSettingsQrMode] = useState<"dynamic" | "static">(dbState.settings?.qrMode || "static");
+  const [settingsQrImageUrl, setSettingsQrImageUrl] = useState(dbState.settings?.qrImageUrl || "/assets/payment_qr.png");
   const [settingsSuccess, setSettingsSuccess] = useState(false);
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     onUpdateSettings({
       upiId: settingsUpiId,
-      qrMode: settingsQrMode
+      qrMode: settingsQrMode,
+      qrImageUrl: settingsQrImageUrl
     });
     setSettingsSuccess(true);
     setTimeout(() => setSettingsSuccess(false), 2000);
+  };
+
+  // Admin Edit Customer Form State
+  const [editingCustId, setEditingCustId] = useState<string | null>(null);
+  const [editCustName, setEditCustName] = useState("");
+  const [editCustEmail, setEditCustEmail] = useState("");
+  const [editCustPhone, setEditCustPhone] = useState("");
+  const [editCustAddress, setEditCustAddress] = useState("");
+  const [editCustSuccess, setEditCustSuccess] = useState(false);
+
+  const handleStartEditCustomer = (cust: User) => {
+    setEditingCustId(cust.id);
+    setEditCustName(cust.name);
+    setEditCustEmail(cust.email);
+    setEditCustPhone(cust.phone || "");
+    setEditCustAddress(cust.address || "");
+  };
+
+  const handleCancelEditCustomer = () => {
+    setEditingCustId(null);
+  };
+
+  const handleAdminEditCustomerSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCustId || !editCustName || !editCustEmail || !editCustPhone || !editCustAddress) return;
+
+    onEditCustomer(editingCustId, {
+      name: editCustName,
+      email: editCustEmail,
+      phone: editCustPhone,
+      address: editCustAddress,
+    });
+
+    setEditCustSuccess(true);
+    setTimeout(() => {
+      setEditCustSuccess(false);
+      setEditingCustId(null);
+    }, 1500);
   };
 
   // Admin Add Product Form State
@@ -779,6 +823,96 @@ export default function AdminDashboard({
               </form>
             )}
 
+            {editingCustId && (
+              <form onSubmit={handleAdminEditCustomerSubmit} className="space-y-4 max-w-2xl bg-slate-50/50 p-6 rounded-2xl border border-pink-200 mb-6 animate-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full uppercase tracking-wider block w-max">
+                    Admin Portal - Edit Customer Profile
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCancelEditCustomer}
+                    className="text-xs text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Customer Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={editCustName}
+                      onChange={(e) => setEditCustName(e.target.value)}
+                      placeholder="e.g. Roshni Patel"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-hidden focus:border-pink-500 focus:bg-white transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={editCustEmail}
+                      onChange={(e) => setEditCustEmail(e.target.value)}
+                      placeholder="e.g. roshni@example.com"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-hidden focus:border-pink-500 focus:bg-white transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Contact Phone</label>
+                    <input
+                      type="tel"
+                      required
+                      value={editCustPhone}
+                      onChange={(e) => setEditCustPhone(e.target.value)}
+                      placeholder="e.g. 9876543210"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-hidden focus:border-pink-500 focus:bg-white transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Complete Delivery Address</label>
+                  <textarea
+                    required
+                    rows={2}
+                    value={editCustAddress}
+                    onChange={(e) => setEditCustAddress(e.target.value)}
+                    placeholder="Street, sector, housing complex, state & pin code..."
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-hidden focus:border-pink-500 focus:bg-white transition-colors"
+                  />
+                </div>
+
+                {editCustSuccess && (
+                  <div className="bg-green-50 text-green-700 border border-green-100 p-3 rounded-lg text-xs font-semibold animate-pulse flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 shrink-0" />
+                    <span>Customer details updated successfully!</span>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs py-2 px-4 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
+                  >
+                    Save Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelEditCustomer}
+                    className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs py-2 px-4 rounded-xl shadow-xs cursor-pointer transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
@@ -787,6 +921,7 @@ export default function AdminDashboard({
                     <th className="p-3 font-semibold">Email</th>
                     <th className="p-3 font-semibold">Delivery Address</th>
                     <th className="p-3 font-semibold text-right">Registration Date</th>
+                    <th className="p-3 font-semibold text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -797,15 +932,36 @@ export default function AdminDashboard({
                         <p className="text-[10px] text-slate-400">{u.phone}</p>
                       </td>
                       <td className="p-3 text-slate-600">{u.email}</td>
-                      <td className="p-3 text-slate-500 max-w-[300px] truncate" title={u.address}>{u.address}</td>
+                      <td className="p-3 text-slate-500 max-w-[250px] truncate" title={u.address}>{u.address}</td>
                       <td className="p-3 text-right text-slate-400 font-mono">
                         {new Date(u.joinedAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
+                      </td>
+                      <td className="p-3 text-right space-x-2.5 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditCustomer(u)}
+                          className="text-pink-600 hover:text-pink-800 font-bold text-xs cursor-pointer inline-flex items-center gap-1 hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete customer ${u.name}?`)) {
+                              onDeleteCustomer(u.id);
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-700 font-bold text-xs cursor-pointer inline-flex items-center gap-1 hover:underline"
+                        >
+                          <Trash2 className="h-3 w-3 inline" />
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
                   {dbState.users.filter(u => u.role === "customer").length === 0 && (
                     <tr>
-                      <td colSpan={4} className="p-4 text-center text-slate-400">No registered customers found. Add some above!</td>
+                      <td colSpan={5} className="p-4 text-center text-slate-400">No registered customers found. Add some above!</td>
                     </tr>
                   )}
                 </tbody>
@@ -884,6 +1040,19 @@ export default function AdminDashboard({
                     </div>
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Static QR Scanner Image URL / Path</label>
+                  <input
+                    type="text"
+                    required
+                    value={settingsQrImageUrl}
+                    onChange={(e) => setSettingsQrImageUrl(e.target.value)}
+                    placeholder="e.g. /assets/payment_qr.png"
+                    className="w-full max-w-md bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-hidden focus:border-pink-500 focus:bg-white transition-colors"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Provide the asset path or public web URL of your static payment scanner QR code.</p>
+                </div>
               </div>
 
               {settingsSuccess && (
@@ -908,7 +1077,7 @@ export default function AdminDashboard({
                 {settingsQrMode === "static" ? (
                   <div className="w-[120px] h-[120px] bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center">
                     <img
-                      src="/assets/payment_qr.png"
+                      src={settingsQrImageUrl}
                       alt="Static Payment QR Code"
                       className="w-full h-full object-cover"
                     />

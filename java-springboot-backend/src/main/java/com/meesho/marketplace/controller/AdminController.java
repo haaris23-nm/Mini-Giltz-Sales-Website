@@ -2,7 +2,10 @@ package com.meesho.marketplace.controller;
 
 import com.meesho.marketplace.model.Seller;
 import com.meesho.marketplace.model.SellerStatus;
+import com.meesho.marketplace.model.User;
+import com.meesho.marketplace.model.UserRole;
 import com.meesho.marketplace.service.SellerService;
+import com.meesho.marketplace.service.UserService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,7 @@ import java.util.UUID;
 public class AdminController {
 
     private final SellerService sellerService;
+    private final UserService userService;
 
     @Data
     public static class SellerStatusUpdateDTO {
@@ -73,5 +77,39 @@ public class AdminController {
         stats.put("nodeInstance", "Spring Boot v3.2.5 Cloud Run Ready");
 
         return ResponseEntity.ok(stats);
+    }
+
+    /**
+     * GET /api/admin/customers
+     */
+    @GetMapping("/customers")
+    public ResponseEntity<List<User>> getAllCustomers() {
+        return ResponseEntity.ok(userService.findByRole(UserRole.customer));
+    }
+
+    /**
+     * PUT /api/admin/customers/{id}
+     */
+    @PutMapping("/customers/{id}")
+    public ResponseEntity<?> updateCustomer(@PathVariable UUID id, @RequestBody User customerDetails) {
+        try {
+            User updated = userService.updateUser(id, customerDetails);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * DELETE /api/admin/customers/{id}
+     */
+    @DeleteMapping("/customers/{id}")
+    public ResponseEntity<?> deleteCustomer(@PathVariable UUID id) {
+        try {
+            userService.deleteUser(id);
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Customer profile deleted successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

@@ -11,6 +11,7 @@ export interface DbState {
   settings: {
     upiId: string;
     qrMode: "dynamic" | "static";
+    qrImageUrl?: string;
   };
 }
 
@@ -57,7 +58,8 @@ export const getDbState = (): DbState => {
       wishlist: {},
       settings: {
         upiId: "tamilveni2306@okaxis",
-        qrMode: "static"
+        qrMode: "static",
+        qrImageUrl: "/assets/payment_qr.png"
       }
     };
   }
@@ -74,7 +76,8 @@ export const getDbState = (): DbState => {
       wishlist: {},
       settings: {
         upiId: "tamilveni2306@okaxis",
-        qrMode: "static"
+        qrMode: "static",
+        qrImageUrl: "/assets/payment_qr.png"
       }
     };
     localStorage.setItem(DB_LOCAL_KEY, JSON.stringify(initialState));
@@ -95,7 +98,8 @@ export const getDbState = (): DbState => {
       wishlist: {},
       settings: {
         upiId: "tamilveni2306@okaxis",
-        qrMode: "static"
+        qrMode: "static",
+        qrImageUrl: "/assets/payment_qr.png"
       }
     };
   }

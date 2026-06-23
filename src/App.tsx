@@ -349,8 +349,37 @@ export default function App() {
     syncDb({ ...dbState, users: [...dbState.users, newUser] });
   };
 
+  const handleDeleteCustomer = (userId: string) => {
+    const updatedUsers = dbState.users.filter(u => u.id !== userId);
+    
+    const updatedCart = { ...dbState.cart };
+    delete updatedCart[userId];
+
+    const updatedWishlist = { ...dbState.wishlist };
+    delete updatedWishlist[userId];
+
+    const updatedOrders = dbState.orders.map(o => 
+      o.customerId === userId ? { ...o, customerId: "anonymous" } : o
+    );
+
+    syncDb({
+      ...dbState,
+      users: updatedUsers,
+      cart: updatedCart,
+      wishlist: updatedWishlist,
+      orders: updatedOrders
+    });
+  };
+
+  const handleEditCustomer = (userId: string, updatedDetails: { name: string; email: string; phone: string; address: string }) => {
+    const updatedUsers = dbState.users.map(u => 
+      u.id === userId ? { ...u, ...updatedDetails } : u
+    );
+    syncDb({ ...dbState, users: updatedUsers });
+  };
+
   // Admin settings update (UPI ID & QR mode)
-  const handleUpdateSettings = (newSettings: { upiId: string; qrMode: "dynamic" | "static" }) => {
+  const handleUpdateSettings = (newSettings: { upiId: string; qrMode: "dynamic" | "static"; qrImageUrl?: string }) => {
     syncDb({ ...dbState, settings: newSettings });
   };
 
@@ -1778,6 +1807,8 @@ export default function App() {
                 onDeleteProduct={handleDeleteProduct}
                 onAddProduct={handleAddSellerProduct}
                 onAddCustomer={handleAddCustomer}
+                onDeleteCustomer={handleDeleteCustomer}
+                onEditCustomer={handleEditCustomer}
                 onUpdateSettings={handleUpdateSettings}
               />
             )}
@@ -1821,7 +1852,7 @@ export default function App() {
                 <>
                   {dbState.settings?.qrMode === "static" ? (
                     <img
-                      src="/assets/payment_qr.png"
+                      src={dbState.settings?.qrImageUrl || "/assets/payment_qr.png"}
                       alt="UPI Payment QR Code"
                       className="h-[200px] w-[200px] bg-white rounded-lg shadow-sm border border-slate-200 object-contain"
                     />
