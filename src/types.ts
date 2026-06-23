@@ -51,6 +51,7 @@ export interface Product {
   updatedDate: string;
   isFeatured?: boolean;
   isTrending?: boolean;
+  isUnavailable?: boolean;
 }
 
 export interface CartItem {

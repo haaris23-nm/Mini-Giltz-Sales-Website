@@ -30,6 +30,7 @@ interface AdminDashboardProps {
   onDeleteCustomer: (userId: string) => void;
   onEditCustomer: (userId: string, updatedDetails: { name: string; email: string; phone: string; address: string }) => void;
   onUpdateSettings: (settings: { upiId: string; qrMode: "dynamic" | "static"; qrImageUrl?: string }) => void;
+  onUpdateAvailability: (productId: string, availability: "available" | "outofstock" | "unavailable") => void;
 }
 
 export default function AdminDashboard({
@@ -42,6 +43,7 @@ export default function AdminDashboard({
   onDeleteCustomer,
   onEditCustomer,
   onUpdateSettings,
+  onUpdateAvailability,
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<"analytics" | "sellers" | "products" | "categories" | "customers" | "settings">("analytics");
 
@@ -683,9 +685,56 @@ export default function AdminDashboard({
                         <p className="text-[10px] text-slate-400 line-through">₹{p.price} ({p.discountPercentage}% off)</p>
                       </td>
                       <td className="p-3">
-                        <span className={`font-semibold ${p.stockQuantity <= 5 ? "text-orange-600 font-bold" : "text-slate-500"}`}>
-                          {p.stockQuantity} Left
-                        </span>
+                        <div className="space-y-1">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold inline-block ${
+                              p.isUnavailable
+                                ? "bg-slate-100 text-slate-600"
+                                : p.stockQuantity === 0
+                                ? "bg-red-50 text-red-700"
+                                : p.stockQuantity < 10
+                                ? "bg-orange-50 text-orange-700"
+                                : "bg-green-50 text-green-700"
+                            }`}
+                          >
+                            {p.isUnavailable ? "Currently Unavailable" : p.stockQuantity === 0 ? "Out of Stock" : `${p.stockQuantity} in Stock`}
+                          </span>
+                          <div className="flex items-center gap-1 mt-1 text-[9px]">
+                            <button
+                              onClick={() => onUpdateAvailability(p.id, "available")}
+                              className={`px-1.5 py-0.5 rounded font-semibold cursor-pointer ${
+                                !p.isUnavailable && p.stockQuantity > 0
+                                  ? "bg-green-600 text-white"
+                                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                              }`}
+                              title="Mark as Available"
+                            >
+                              Available
+                            </button>
+                            <button
+                              onClick={() => onUpdateAvailability(p.id, "outofstock")}
+                              className={`px-1.5 py-0.5 rounded font-semibold cursor-pointer ${
+                                !p.isUnavailable && p.stockQuantity === 0
+                                  ? "bg-orange-500 text-white"
+                                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                              }`}
+                              title="Mark as Out of Stock"
+                            >
+                              Out
+                            </button>
+                            <button
+                              onClick={() => onUpdateAvailability(p.id, "unavailable")}
+                              className={`px-1.5 py-0.5 rounded font-semibold cursor-pointer ${
+                                p.isUnavailable
+                                  ? "bg-red-500 text-white"
+                                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                              }`}
+                              title="Mark as Currently Unavailable"
+                            >
+                              Unavailable
+                            </button>
+                          </div>
+                        </div>
                       </td>
                       <td className="p-3 text-right">
                         <button

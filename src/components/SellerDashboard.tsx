@@ -24,6 +24,7 @@ interface SellerDashboardProps {
   onAddProduct: (product: Omit<Product, "id" | "sellerId" | "sellerName" | "ratings" | "reviewsCount" | "reviews" | "createdDate" | "updatedDate">) => void;
   onUpdateStock: (productId: string, quantity: number) => void;
   onUpdateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  onUpdateAvailability: (productId: string, availability: "available" | "outofstock" | "unavailable") => void;
 }
 
 export default function SellerDashboard({
@@ -32,6 +33,7 @@ export default function SellerDashboard({
   onAddProduct,
   onUpdateStock,
   onUpdateOrderStatus,
+  onUpdateAvailability,
 }: SellerDashboardProps) {
   const sellerId = currentUser.id;
   const sellerInfo = dbState.sellers.find(s => s.id === sellerId);
@@ -438,7 +440,7 @@ export default function SellerDashboard({
                     <th className="p-3 font-semibold">Category</th>
                     <th className="p-3 font-semibold">Active Price</th>
                     <th className="p-3 font-semibold">Stock status</th>
-                    <th className="p-3 font-semibold text-right">Quick Restock</th>
+                    <th className="p-3 font-semibold text-right">Availability Controls</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -460,30 +462,52 @@ export default function SellerDashboard({
                           <td className="p-3">
                             <span
                               className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                p.stockQuantity === 0
+                                p.isUnavailable
+                                  ? "bg-slate-100 text-slate-600"
+                                  : p.stockQuantity === 0
                                   ? "bg-red-50 text-red-700"
                                   : p.stockQuantity < 10
                                   ? "bg-orange-50 text-orange-700"
                                   : "bg-green-50 text-green-700"
                               }`}
                             >
-                              {p.stockQuantity === 0 ? "Out of Stock" : `${p.stockQuantity} in Stock`}
+                              {p.isUnavailable ? "Currently Unavailable" : p.stockQuantity === 0 ? "Out of Stock" : `${p.stockQuantity} in Stock`}
                             </span>
                           </td>
                           <td className="p-3 text-right">
-                            <div className="flex justify-end items-center gap-1">
+                            <div className="flex justify-end items-center gap-1.5">
                               <button
-                                onClick={() => onUpdateStock(p.id, -5)}
-                                disabled={p.stockQuantity < 5}
-                                className="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded font-bold disabled:opacity-50 cursor-pointer"
+                                onClick={() => onUpdateAvailability(p.id, "available")}
+                                className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer transition ${
+                                  !p.isUnavailable && p.stockQuantity > 0
+                                    ? "bg-green-600 text-white"
+                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                }`}
+                                title="Mark as Available"
                               >
-                                -5
+                                Available
                               </button>
                               <button
-                                onClick={() => onUpdateStock(p.id, 10)}
-                                className="bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-1 rounded font-bold cursor-pointer"
+                                onClick={() => onUpdateAvailability(p.id, "outofstock")}
+                                className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer transition ${
+                                  !p.isUnavailable && p.stockQuantity === 0
+                                    ? "bg-orange-500 text-white"
+                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                }`}
+                                title="Mark as Out of Stock"
                               >
-                                +10
+                                Out of Stock
+                              </button>
+                              <button
+                                onClick={() => onUpdateAvailability(p.id, "unavailable")}
+                                className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer transition ${
+                                  p.isUnavailable
+                                    ? "bg-red-500 text-white"
+                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                }`}
+                                title="Mark as Currently Unavailable"
+                              >
+                                Unavailable
                               </button>
                             </div>
                           </td>

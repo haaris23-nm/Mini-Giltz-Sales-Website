@@ -52,6 +52,13 @@ export default function ProductCard({
           referrerPolicy="no-referrer"
           className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
         />
+        {product.isUnavailable && (
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-3xs flex items-center justify-center z-10 animate-in fade-in duration-150">
+            <span className="bg-slate-800/90 text-white font-bold text-xs uppercase px-3 py-1.5 rounded-lg tracking-wider">
+              Unavailable
+            </span>
+          </div>
+        )}
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
           <button className="p-2 bg-white rounded-full text-slate-700 hover:text-pink-600 shadow-sm transition-transform scale-90 group-hover:scale-100">
             <Eye className="h-4 w-4" />
@@ -80,16 +87,19 @@ export default function ProductCard({
           <span className="text-xs text-slate-400 font-medium">
             ({product.reviewsCount} reviews)
           </span>
-          {product.stockQuantity < 10 && product.stockQuantity > 0 && (
+          {product.isUnavailable ? (
+            <span className="ml-auto text-xs font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+              Unavailable
+            </span>
+          ) : product.stockQuantity < 10 && product.stockQuantity > 0 ? (
             <span className="ml-auto text-xs font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
               Only {product.stockQuantity} Left
             </span>
-          )}
-          {product.stockQuantity === 0 && (
+          ) : product.stockQuantity === 0 ? (
             <span className="ml-auto text-xs font-medium text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
               Out of Stock
             </span>
-          )}
+          ) : null}
         </div>
 
         {/* Price & Cart Segment */}
@@ -110,13 +120,17 @@ export default function ProductCard({
         <button
           id={`add-cart-btn-${product.id}`}
           onClick={(e) => onAddToCart(product, e)}
-          disabled={product.stockQuantity === 0}
-          className={`mt-3 w-full border border-pink-600 text-pink-600 font-semibold py-1.5 px-3 rounded text-xs transition-colors hover:bg-pink-50 duration-150 flex items-center justify-center gap-2 cursor-pointer ${
-            product.stockQuantity === 0 ? "opacity-50 cursor-not-allowed border-slate-300 text-slate-400" : ""
+          disabled={product.stockQuantity === 0 || product.isUnavailable}
+          className={`mt-3 w-full border font-semibold py-1.5 px-3 rounded text-xs transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer ${
+            product.isUnavailable
+              ? "opacity-50 cursor-not-allowed border-slate-300 text-slate-400 bg-slate-50"
+              : product.stockQuantity === 0
+              ? "opacity-50 cursor-not-allowed border-slate-300 text-slate-400 bg-slate-50"
+              : "border-pink-600 text-pink-600 hover:bg-pink-50"
           }`}
         >
           <ShoppingCart className="h-3 w-3" />
-          {product.stockQuantity === 0 ? "Out of Stock" : "Add to Cart"}
+          {product.isUnavailable ? "Currently Unavailable" : product.stockQuantity === 0 ? "Out of Stock" : "Add to Cart"}
         </button>
       </div>
     </div>

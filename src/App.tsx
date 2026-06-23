@@ -89,6 +89,12 @@ export default function App() {
   const [upiTimer, setUpiTimer] = useState(120);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
 
+  // Popup / Toast / Quantity Modal Dashboard states
+  const [authPopup, setAuthPopup] = useState<{ show: boolean; type: "login" | "logout"; user?: User } | null>(null);
+  const [qtySelectorPopup, setQtySelectorPopup] = useState<{ show: boolean; product: Product } | null>(null);
+  const [cartSuccessPopup, setCartSuccessPopup] = useState<{ show: boolean; product: Product; quantity: number } | null>(null);
+  const [tempCartQty, setTempCartQty] = useState<number>(1);
+
   // Sync state changes with localStorage
   const syncDb = (updatedState: DbState) => {
     setDbState(updatedState);
@@ -149,12 +155,19 @@ export default function App() {
       return;
     }
 
+    setTempCartQty(1);
+    setQtySelectorPopup({ show: true, product });
+  };
+
+  const handleConfirmAddToCart = (product: Product, quantity: number) => {
+    if (!currentUser) return;
+
     const updatedCarts = { ...dbState.cart };
     const userCartItems = [...(updatedCarts[currentUser.id] || [])];
 
     const existingIdx = userCartItems.findIndex(i => i.productId === product.id);
     if (existingIdx !== -1) {
-      userCartItems[existingIdx].quantity += 1;
+      userCartItems[existingIdx].quantity += quantity;
     } else {
       userCartItems.push({
         id: `cart-item-${Date.now()}`,
@@ -162,14 +175,13 @@ export default function App() {
         name: product.name,
         price: product.price,
         discountPercentage: product.discountPercentage,
-        quantity: 1,
+        quantity: quantity,
         image: product.images[0],
         sellerId: product.sellerId
       });
     }
 
     updatedCarts[currentUser.id] = userCartItems;
-    syncDb({ ...dbState, cart: updatedCarts });
     setUserCart(userCartItems);
 
     // Prompt soft dispatch notification
@@ -177,16 +189,20 @@ export default function App() {
       id: `notif-add-${Date.now()}`,
       userId: currentUser.id,
       title: "Product Added to Cart",
-      message: `${product.name} has been placed in your checkout tray. Apply coupon to enjoy discounts!`,
+      message: `x${quantity} of ${product.name} has been placed in your checkout tray. Apply coupon to enjoy discounts!`,
       type: "general",
       isRead: false,
       createdDate: new Date().toISOString()
     };
+
     syncDb({
       ...dbState,
       cart: updatedCarts,
       notifications: [newNotif, ...dbState.notifications]
     });
+
+    setQtySelectorPopup(null);
+    setCartSuccessPopup({ show: true, product, quantity });
   };
 
   const handleUpdateCartQty = (productId: string, delta: number) => {
@@ -408,6 +424,28 @@ export default function App() {
     syncDb({ ...dbState, products: updatedProducts });
   };
 
+  const handleUpdateAvailability = (productId: string, availability: "available" | "outofstock" | "unavailable") => {
+    const updatedProducts = dbState.products.map(p => {
+      if (p.id === productId) {
+        let stock = p.stockQuantity;
+        let unavailable = false;
+        if (availability === "available") {
+          stock = p.stockQuantity <= 0 ? 50 : p.stockQuantity;
+          unavailable = false;
+        } else if (availability === "outofstock") {
+          stock = 0;
+          unavailable = false;
+        } else if (availability === "unavailable") {
+          unavailable = true;
+          stock = 0;
+        }
+        return { ...p, stockQuantity: stock, isUnavailable: unavailable };
+      }
+      return p;
+    });
+    syncDb({ ...dbState, products: updatedProducts });
+  };
+
   // Customer cancel order request
   const handleCancelOrder = (orderId: string) => {
     const order = dbState.orders.find(o => o.id === orderId);
@@ -459,6 +497,7 @@ export default function App() {
         const matchedAdmin = dbState.users.find(u => u.role === "admin");
         if (matchedAdmin) {
           setCurrentUser(matchedAdmin);
+          setAuthPopup({ show: true, type: "login", user: matchedAdmin });
           setActivePage("home");
           setLoginEmail("");
           setLoginPass("");
@@ -473,6 +512,7 @@ export default function App() {
       const matched = dbState.users.find(u => u.email.toLowerCase() === emailNorm);
       if (matched) {
         setCurrentUser(matched);
+        setAuthPopup({ show: true, type: "login", user: matched });
         setActivePage("home");
         setLoginEmail("");
         setLoginPass("");
@@ -530,8 +570,7 @@ export default function App() {
     setDbState(stateToSave);
     saveDbState(stateToSave);
     setCurrentUser(newUser);
-
-    alert(`Account created! Logged in as ${newUser.role}.`);
+    setAuthPopup({ show: true, type: "login", user: newUser });
     setActivePage("home");
 
     // reset forms
@@ -784,6 +823,18 @@ export default function App() {
           {/* Action Hub buttons */}
           <div className="flex items-center gap-3.5 text-xs font-semibold">
             <button
+              id="nav-home"
+              onClick={() => {
+                setActivePage("home");
+                setSelectedCategory("");
+                setSearchQuery("");
+                setSelectedProduct(null);
+              }}
+              className={`hover:text-pink-600 transition-colors cursor-pointer ${activePage === "home" ? "text-pink-600" : "text-slate-600"}`}
+            >
+              Home
+            </button>
+            <button
               id="nav-about"
               onClick={() => setActivePage("about")}
               className={`hover:text-pink-600 transition-colors cursor-pointer ${activePage === "about" ? "text-pink-600" : "text-slate-600"}`}
@@ -828,7 +879,9 @@ export default function App() {
                 <button
                   id="logout-btn"
                   onClick={() => {
+                    const prevUser = currentUser;
                     setCurrentUser(null);
+                    setAuthPopup({ show: true, type: "logout", user: prevUser || undefined });
                     setActivePage("home");
                   }}
                   className="text-slate-400 hover:text-red-600 p-1.5 cursor-pointer"
@@ -1796,6 +1849,7 @@ export default function App() {
                 onAddProduct={handleAddSellerProduct}
                 onUpdateStock={handleUpdateStock}
                 onUpdateOrderStatus={handleUpdateOrderStatus}
+                onUpdateAvailability={handleUpdateAvailability}
               />
             )}
 
@@ -1810,6 +1864,7 @@ export default function App() {
                 onDeleteCustomer={handleDeleteCustomer}
                 onEditCustomer={handleEditCustomer}
                 onUpdateSettings={handleUpdateSettings}
+                onUpdateAvailability={handleUpdateAvailability}
               />
             )}
           </div>
@@ -1986,6 +2041,158 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* LOGIN/LOGOUT OVERLAY DASHBOARD */}
+      {authPopup?.show && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-3xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-100 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-center animate-in zoom-in-95 duration-200">
+            {authPopup.type === "login" ? (
+              <>
+                <div className="h-12 w-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
+                  <Check className="h-6 w-6 stroke-[3px]" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-lg">Login Successful</h3>
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-left text-xs space-y-2">
+                  <p className="text-slate-500 font-semibold uppercase text-[9px] tracking-wider">Account Information</p>
+                  <p><span className="text-slate-400 font-medium">Name:</span> <span className="font-bold text-slate-800">{authPopup.user?.name}</span></p>
+                  <p><span className="text-slate-400 font-medium">Email:</span> <span className="font-semibold text-slate-600">{authPopup.user?.email}</span></p>
+                  <p>
+                    <span className="text-slate-400 font-medium">Role Portal:</span>{" "}
+                    <span className="bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded-full uppercase text-[9px]">
+                      {authPopup.user?.role}
+                    </span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => setAuthPopup(null)}
+                  className="w-full bg-slate-900 hover:bg-black text-white font-bold py-2 text-xs rounded-xl transition cursor-pointer"
+                >
+                  Go to Marketplace
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="h-12 w-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto">
+                  <LogOut className="h-6 w-6" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-lg">Logged Out</h3>
+                <p className="text-slate-500 text-xs leading-relaxed">
+                  You have been successfully logged out from Mini Glitz. Hope to see you back soon!
+                </p>
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 text-left text-[11px] text-slate-500 italic">
+                  "Thank you for shopping on India's favorite social commerce community marketplace."
+                </div>
+                <button
+                  onClick={() => setAuthPopup(null)}
+                  className="w-full bg-slate-900 hover:bg-black text-white font-bold py-2 text-xs rounded-xl transition cursor-pointer"
+                >
+                  Close Dashboard
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* CART QUANTITY SELECTOR MODAL */}
+      {qtySelectorPopup?.show && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-3xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-100 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-center animate-in zoom-in-95 duration-200">
+            <h3 className="font-bold text-slate-900 text-base">Select Quantity</h3>
+            <p className="text-slate-500 text-xs">How many items do you want to add to your cart?</p>
+            
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center gap-3">
+              <img
+                src={qtySelectorPopup.product.images[0]}
+                alt=""
+                className="h-12 w-12 rounded-lg object-cover shadow-xs border border-slate-200 shrink-0"
+              />
+              <div className="text-left min-w-0 flex-1">
+                <h4 className="font-bold text-slate-800 text-xs truncate">{qtySelectorPopup.product.name}</h4>
+                <p className="font-semibold text-pink-600 text-xs mt-0.5">
+                  ₹{Math.round(qtySelectorPopup.product.price * (1 - qtySelectorPopup.product.discountPercentage / 100))}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-4 py-2">
+              <button
+                type="button"
+                onClick={() => setTempCartQty(q => Math.max(1, q - 1))}
+                className="h-9 w-9 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full font-bold flex items-center justify-center text-sm cursor-pointer"
+              >
+                -
+              </button>
+              <span className="font-bold text-slate-800 text-base w-12">{tempCartQty}</span>
+              <button
+                type="button"
+                onClick={() => setTempCartQty(q => Math.min(qtySelectorPopup.product.stockQuantity, q + 1))}
+                className="h-9 w-9 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full font-bold flex items-center justify-center text-sm cursor-pointer"
+              >
+                +
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-400">Available Stock: {qtySelectorPopup.product.stockQuantity} items</p>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleConfirmAddToCart(qtySelectorPopup.product, tempCartQty)}
+                className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 text-xs rounded-xl transition cursor-pointer"
+              >
+                Confirm Add
+              </button>
+              <button
+                type="button"
+                onClick={() => setQtySelectorPopup(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 text-xs rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADDED TO CART SUCCESS TOAST */}
+      {cartSuccessPopup?.show && (
+        <div className="fixed bottom-4 right-4 bg-white border border-slate-100 rounded-2xl p-4 shadow-xl max-w-sm w-full z-50 animate-in slide-in-from-bottom-5 duration-200 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="h-8 w-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center shrink-0">
+              <Check className="h-4 w-4 stroke-[3px]" />
+            </div>
+            <div className="text-left text-xs min-w-0 flex-1">
+              <h4 className="font-bold text-slate-900">Item Added to Bag</h4>
+              <p className="text-slate-500 mt-0.5 leading-relaxed">
+                Added <span className="font-bold text-slate-800">x{cartSuccessPopup.quantity}</span> of <span className="font-semibold text-slate-800">{cartSuccessPopup.product.name}</span> successfully.
+              </p>
+            </div>
+            <button
+              onClick={() => setCartSuccessPopup(null)}
+              className="text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={() => {
+                setCartSuccessPopup(null);
+                setActivePage("cart");
+              }}
+              className="flex-1 bg-slate-900 hover:bg-black text-white font-bold py-1.5 text-[10px] rounded-lg transition cursor-pointer text-center"
+            >
+              View Bag / Checkout
+            </button>
+            <button
+              onClick={() => setCartSuccessPopup(null)}
+              className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-1.5 text-[10px] rounded-lg transition cursor-pointer text-center"
+            >
+              Continue Shopping
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
